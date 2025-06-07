@@ -1,60 +1,36 @@
-import readline from 'readline';
-import type { CLICommand } from './command.js';
-import { commandExit } from './command_exit.js';
-import { commandHelp } from './command_help.js';
-
-export function getCommands(): Record<string, CLICommand> {
-	return {
-		exit: {
-			name: "exit",
-			description: "Exits the pokedex",
-			callback: commandExit,
-		},
-		help:	{
-			name: "help",
-			description: "Lists available commands",
-			callback: commandHelp
-		}
-	}
-}
+import { State } from "./state.js";
 
 export function cleanInput(input: string): string[] {
   return input.trim().split(/\s+/).filter(Boolean);
 }
 
-export function startREPL(): void {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: 'Pokedex > ',
-  });
+export function startREPL(state: State) {
+	state.readline.prompt();
 
-  rl.prompt();
+	state.readline.on("line", async (input) => {
+		const words = cleanInput(input);
+		if (words.length === 0) {
+			state.readline.prompt();
+			return;
+		}
 
-  rl.on('line', (line) => {
-  	const commands = getCommands();
-	const words = cleanInput(line);
+		const commandName = words[0];
 
-	if (words.length === 0) {
-		rl.prompt();
-		return;
-	}
+		const cmd = state.commands[commandName];
+		if (!cmd) {
+			console.log(
+				`Unknown command: "${commandName}". Type "help" for a list of commands.`,
+			);
+			state.readline.prompt();
+			return;
+		}
 
-	const word = words[0].toLowerCase();
+		try {
+			cmd.callback(state);
+		} catch (e) {
+			console.log(e);
+		}
 
-
-	if (commands[word]) {
-		commands[word].callback(commands);
-	} else {
-		console.log('Unknown command.');
-	}
-
-	rl.prompt();
-  });
-
-  rl.on('close', () => {
-    console.log('Exiting REPL. Goodbye!');
-    process.exit(0);
-  });
+		state.readline.prompt();
+	});
 }
-
