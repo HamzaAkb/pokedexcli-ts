@@ -1,4 +1,22 @@
 import readline from 'readline';
+import type { CLICommand } from './command.js';
+import { commandExit } from './command_exit.js';
+import { commandHelp } from './command_help.js';
+
+export function getCommands(): Record<string, CLICommand> {
+	return {
+		exit: {
+			name: "exit",
+			description: "Exits the pokedex",
+			callback: commandExit,
+		},
+		help:	{
+			name: "help",
+			description: "Lists available commands",
+			callback: commandHelp
+		}
+	}
+}
 
 export function cleanInput(input: string): string[] {
   return input.trim().split(/\s+/).filter(Boolean);
@@ -13,16 +31,25 @@ export function startREPL(): void {
 
   rl.prompt();
 
-  rl.on('line', (line: string) => {
-    const words = cleanInput(line);
+  rl.on('line', (line) => {
+  	const commands = getCommands();
+	const words = cleanInput(line);
 
-    if (words.length === 0) {
-      rl.prompt();
-      return;
-    }
+	if (words.length === 0) {
+		rl.prompt();
+		return;
+	}
 
-    console.log(`Your command was: ${words[0].toLowerCase()}`);
-    rl.prompt();
+	const word = words[0].toLowerCase();
+
+
+	if (commands[word]) {
+		commands[word].callback(commands);
+	} else {
+		console.log('Unknown command.');
+	}
+
+	rl.prompt();
   });
 
   rl.on('close', () => {
